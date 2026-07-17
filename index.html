@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
+<head><script async src="https://www.googletagmanager.com/gtag/js?id=G-5YW0T2C109"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-5YW0T2C109');
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>협똥킹 (협동 똥피하기 킹) | Shit Dodge King</title>
@@ -736,15 +743,15 @@
                         pl.pointerId = null;
                         audio.playDeath();
                     } else {
-                        pl.hearts--;
-                        if (pl.hearts <= 0) {
+                        if (pl.hearts > 0) {
+                            pl.hearts--;
+                            createSplatParticles(pl.x, pl.y - 30, 5);
+                        } else {
                             pl.state = 'frozen';
                             pl.frozenTimeLeft = 15.0;
                             pl.reviveProgress = 0;
                             pl.pointerId = null;
                             audio.playDeath();
-                        } else {
-                            createSplatParticles(pl.x, pl.y - 30, 5);
                         }
                     }
                 }
@@ -1426,17 +1433,17 @@
                                 pl.pointerId = null;
                                 audio.playDeath();
                             } else {
-                                pl.hearts--;
-                                if (pl.hearts <= 0) {
+                                if (pl.hearts > 0) {
+                                    pl.hearts--;
+                                    audio.playHit();
+                                    screenShake = 12;
+                                    createSplatParticles(pl.x, pl.y - 30, 8);
+                                } else {
                                     pl.state = 'frozen';
                                     pl.frozenTimeLeft = 15.0;
                                     pl.reviveProgress = 0;
                                     pl.pointerId = null;
                                     audio.playDeath();
-                                } else {
-                                    audio.playHit();
-                                    screenShake = 12;
-                                    createSplatParticles(pl.x, pl.y - 30, 8);
                                 }
                             }
                         }
