@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>협똥킹 (협동 똥피하기 킹) | Shit Dodge King</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap');
+        
+        /* [전자칠판 최적화 제약 조건 적용] */
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Gaegu', cursive;
+            background-color: #080710;
+            overflow: hidden;
+            touch-action: none;
+            overscroll-behavior: none;
+        }
+        canvas {
+            touch-action: none;
+            display: block;
+        }
+        /* Neon border styling */
+        .neon-border {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05), inset 0 0 20px rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between h-[100dvh] w-screen p-4 text-white overflow-hidden">
+
+    <!-- Header Panel (영어 병기) -->
+    <header class="w-full flex justify-between items-center bg-white/5 backdrop-blur-md px-6 py-2 rounded-2xl border border-white/10 shadow-lg min-h-[64px]">
+        <div class="flex flex-col items-start justify-center leading-tight">
+            <h1 class="text-3xl font-extrabold flex items-center gap-2">
+                <span class="text-2xl select-none">💩</span>
+                <span class="bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">협똥킹</span>
+                <span class="text-xl font-bold text-slate-300">(협동 똥피하기 킹)</span>
+                <span class="text-2xl select-none">🌂</span>
+            </h1>
+            <span class="text-xs text-slate-400/90 font-mono tracking-wider ml-9">Shit Dodge King (Co-op Survival)</span>
+        </div>
+        <div class="flex items-center gap-4 text-lg">
+            <div class="bg-black/40 px-4 py-1 rounded-full border border-yellow-500/30 text-center leading-tight">
+                <span class="text-xs block text-slate-400 font-normal">팀 생존 시간 Team Time</span>
+                <span id="team-timer" class="font-mono text-yellow-400 font-bold">00:00.00</span>
+            </div>
+            <div id="live-players-count" class="bg-black/40 px-4 py-1 rounded-full border border-green-500/30 text-center leading-tight">
+                <span class="text-xs block text-slate-400 font-normal">생존 인원 Survival</span>
+                <div><span id="alive-count" class="text-green-400 font-bold">0</span> / <span id="total-count" class="text-slate-300">0</span></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Window -->
+    <main class="relative w-full flex-grow my-3 flex items-center justify-center overflow-hidden">
+        
+        <!-- Setup Modal/Overlay (영어 병기) -->
+        <div id="setup-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-30 rounded-2xl border border-white/10 p-6 overflow-y-auto">
+            <div class="max-w-xl w-full text-center py-2">
+                <h2 class="text-4xl font-extrabold mb-5 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent drop-shadow-md">
+                    협똥킹 게임 설정
+                    <span class="text-lg block text-slate-400 font-normal mt-0.5">Game Settings</span>
+                </h2>
+                
+                <!-- Players Selector -->
+                <div class="mb-4">
+                    <label class="block text-xl mb-1.5 text-slate-300">
+                        플레이어 인원수
+                        <span class="text-xs inline opacity-70 ml-1">Number of Players</span>
+                    </label>
+                    <div class="flex justify-center gap-2">
+                        <button onpointerdown="setPlayers(1)" class="player-btn px-4 py-1.5 bg-slate-800 rounded-xl text-xl font-bold border-2 border-transparent hover:border-indigo-500 transition">1P</button>
+                        <button onpointerdown="setPlayers(2)" class="player-btn px-4 py-1.5 bg-slate-800 rounded-xl text-xl font-bold border-2 border-transparent hover:border-indigo-500 transition">2P</button>
+                        <button onpointerdown="setPlayers(3)" class="player-btn px-4 py-1.5 bg-slate-800 rounded-xl text-xl font-bold border-2 border-transparent hover:border-indigo-500 transition">3P</button>
+                        <button onpointerdown="setPlayers(4)" class="player-btn px-4 py-1.5 bg-slate-800 rounded-xl text-xl font-bold border-2 border-transparent hover:border-indigo-500 transition">4P</button>
+                        <button onpointerdown="setPlayers(5)" class="player-btn px-4 py-1.5 bg-slate-800 rounded-xl text-xl font-bold border-2 border-transparent hover:border-indigo-500 transition">5P</button>
+                        <button onpointerdown="setPlayers(6)" class="player-btn px-4 py-1.5 bg-indigo-600 rounded-xl text-xl font-bold border-2 border-indigo-400 hover:border-indigo-500 transition">6P</button>
+                    </div>
+                </div>
+
+                <!-- Hearts Option -->
+                <div class="mb-4">
+                    <label class="block text-xl mb-1.5 text-slate-300">
+                        시작 하트 개수
+                        <span class="text-xs inline opacity-70 ml-1">Starting Hearts</span>
+                    </label>
+                    <div class="flex justify-center gap-2 flex-wrap">
+                        <button onpointerdown="setHearts(0)" class="heart-btn px-4 py-1.5 bg-slate-800 rounded-xl text-lg font-bold border-2 border-transparent hover:border-pink-500 transition">
+                            없음 <span class="text-xs block font-normal opacity-70">None</span>
+                        </button>
+                        <button onpointerdown="setHearts(1)" class="heart-btn px-4 py-1.5 bg-slate-800 rounded-xl text-lg font-bold border-2 border-transparent hover:border-pink-500 transition">
+                            1개 <span class="text-xs block font-normal opacity-70">1 Heart</span>
+                        </button>
+                        <button onpointerdown="setHearts(2)" class="heart-btn px-4 py-1.5 bg-slate-800 rounded-xl text-lg font-bold border-2 border-transparent hover:border-pink-500 transition">
+                            2개 <span class="text-xs block font-normal opacity-70">2 Hearts</span>
+                        </button>
+                        <button onpointerdown="setHearts(3)" class="heart-btn px-4 py-1.5 bg-pink-600 rounded-xl text-lg font-bold border-2 border-pink-400 hover:border-pink-500 transition">
+                            3개 <span class="text-xs block font-normal opacity-70">3 Hearts</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Difficulty Option -->
+                <div class="mb-6">
+                    <label class="block text-xl mb-1.5 text-slate-300">
+                        난이도
+                        <span class="text-xs inline opacity-70 ml-1">Difficulty</span>
+                    </label>
+                    <div class="flex justify-center gap-3">
+                        <button onpointerdown="setDifficulty('easy')" class="diff-btn px-5 py-1.5 bg-slate-800 rounded-xl text-lg font-bold border-2 border-transparent hover:border-green-500 transition">
+                            하 (초보) <span class="text-xs block font-normal opacity-70">Easy</span>
+                        </button>
+                        <button onpointerdown="setDifficulty('medium')" class="diff-btn px-5 py-1.5 bg-yellow-600 rounded-xl text-lg font-bold border-2 border-yellow-400 hover:border-yellow-500 transition">
+                            중 (일반) <span class="text-xs block font-normal opacity-70">Normal</span>
+                        </button>
+                        <button onpointerdown="setDifficulty('hard')" class="diff-btn px-5 py-1.5 bg-slate-800 rounded-xl text-lg font-bold border-2 border-transparent hover:border-red-500 transition">
+                            상 (매운맛) <span class="text-xs block font-normal opacity-70">Hard</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Game Start and Info buttons in a Row -->
+                <div class="flex gap-4 max-w-md mx-auto">
+                    <button onpointerdown="openInstructions()" class="w-1/3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 rounded-2xl text-xl font-bold transition active:scale-95 flex flex-col items-center justify-center">
+                        <span>게임 안내 📖</span>
+                        <span class="text-[10px] font-normal opacity-75">Instructions</span>
+                    </button>
+                    <button onpointerdown="startGame()" class="w-2/3 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 rounded-2xl text-2xl font-extrabold text-white shadow-lg shadow-yellow-500/20 hover:scale-105 active:scale-95 transition duration-200 flex flex-col items-center justify-center">
+                        <span>게임 시작 🚀</span>
+                        <span class="text-[10px] font-normal opacity-85">Start Game</span>
+                    </button>
+                </div>
+                <!-- More Games Button Link -->
+                <div class="mt-3 max-w-md mx-auto">
+                    <button onpointerdown="window.location.href='http://킹수학.com'" class="w-full py-2 bg-slate-900/90 hover:bg-slate-800 border border-white/5 rounded-2xl text-lg font-bold text-slate-300 transition active:scale-95 flex flex-col items-center justify-center">
+                        <span>다른 게임 고르기 🎮</span>
+                        <span class="text-[9px] font-normal opacity-70">More Games</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Result Overlay (컴팩트 수정 & 영어 병기) -->
+        <div id="gameover-overlay" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-30 rounded-2xl border border-white/10 p-4 md:p-6 overflow-y-auto">
+            <div class="max-w-2xl w-full text-center flex flex-col items-center justify-center h-full">
+                <h2 class="text-4xl md:text-5xl font-extrabold text-red-500 mb-1 drop-shadow-md">
+                    ☠️ 전멸! Game Over
+                    <span class="text-lg block text-slate-400 font-normal mt-0.5">Defeated! Game Over</span>
+                </h2>
+                <p class="text-xl text-slate-400 mb-2">
+                    우리 팀이 버틴 총 시간
+                    <span class="text-xs block text-slate-500 font-normal mt-0.5">Total Team Survival Time</span>
+                </p>
+                <div class="inline-block bg-black/50 border border-yellow-500/40 px-6 py-2 md:py-3 rounded-2xl mb-4">
+                    <span id="final-time" class="text-4xl md:text-5xl font-mono font-bold text-yellow-400">00:00.00</span>
+                </div>
+
+                <div class="bg-slate-900/80 border border-white/10 rounded-2xl p-4 w-full mb-4 text-left">
+                    <h3 class="text-xl font-bold mb-2 text-slate-300 border-b border-white/10 pb-1 flex justify-between items-center">
+                        <span>📊 플레이어 생존 기록 (팀 기여도)</span>
+                        <span class="text-xs font-normal opacity-70">Player Survival Records (Contribution)</span>
+                    </h3>
+                    <div id="scoreboard-list" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <!-- Scoreboard entries injected dynamically -->
+                    </div>
+                </div>
+
+                <div class="flex gap-4 w-full justify-center max-w-md">
+                    <button onpointerdown="resetSetup()" class="w-1/2 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl text-2xl font-extrabold text-white shadow-lg shadow-green-500/20 hover:scale-105 active:scale-95 transition duration-200 flex flex-col items-center justify-center">
+                        <span>다시 하기 🔄</span>
+                        <span class="text-[10px] font-normal opacity-85">Play Again</span>
+                    </button>
+                    <button onpointerdown="window.location.href='http://킹수학.com'" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 rounded-2xl text-xl font-bold text-slate-300 transition active:scale-95 flex flex-col items-center justify-center">
+                        <span>다른 게임 고르기 🎮</span>
+                        <span class="text-[10px] font-normal opacity-75">More Games</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions Modal Overlay (영어 병기) -->
+        <div id="instructions-modal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-40 rounded-2xl border border-white/10 p-6 overflow-y-auto">
+            <div class="max-w-xl w-full text-left bg-slate-900 border border-white/10 p-6 rounded-3xl shadow-2xl relative">
+                <h3 class="text-3xl font-extrabold text-yellow-400 mb-4 border-b border-white/10 pb-2">
+                    📖 협똥킹 게임 안내
+                    <span class="text-sm block text-slate-400 font-normal mt-0.5">Game Instructions</span>
+                </h3>
+                <ul class="list-disc pl-5 space-y-2.5 text-lg text-slate-300 mb-6 leading-normal">
+                    <li>
+                        <strong>드래그 조작</strong>: 본인 캐릭터를 마우스나 터치 드래그로 움직입니다.
+                        <span class="text-xs block text-slate-400"><strong>Drag Control</strong>: Drag your character to dodge poops.</span>
+                    </li>
+                    <li>
+                        <strong>협동 생존</strong>: 1명이라도 생존해 있으면 게임은 지속됩니다.
+                        <span class="text-xs block text-slate-400"><strong>Co-op Survival</strong>: Survives as long as at least one player is active.</span>
+                    </li>
+                    <li>
+                        <strong>얼음땡 부활 💫</strong>: 하트 소진 시 기절하며, 친구가 5초간 대기 시 부활합니다.
+                        <span class="text-xs block text-slate-400"><strong>Freeze Tag Revival</strong>: Frozen at 0 hearts; stand nearby for 5 seconds to revive.</span>
+                    </li>
+                    <li>
+                        <strong>0초 세이브 ⏱️</strong>: 0초 순간이라도 친구가 살려주는 중이면 타이머가 정지합니다.
+                        <span class="text-xs block text-slate-400"><strong>Clutch Save</strong>: Timer pauses at 0s if a helper is actively reviving.</span>
+                    </li>
+                    <li>
+                        <strong>하트 선물 ❤️🤝</strong>: 하트 획득 후 5초 이내에 접촉 시 친구도 획득합니다.
+                        <span class="text-xs block text-slate-400"><strong>Heart Share</strong>: Touch friends within 5s after eating a heart to share it.</span>
+                    </li>
+                    <li>
+                        <strong>협동 우산 🌂</strong>: 우산 가로 영역 아래 서 있는 모든 플레이어를 보호합니다.
+                        <span class="text-xs block text-slate-400"><strong>Co-op Umbrella</strong>: Shields all players standing beneath the umbrella canopy.</span>
+                    </li>
+                </ul>
+                <button onpointerdown="closeInstructions()" class="w-full py-2.5 bg-indigo-600 rounded-xl text-xl font-bold text-white hover:bg-indigo-700 active:scale-95 transition flex flex-col items-center justify-center">
+                    <span>확인 (닫기)</span>
+                    <span class="text-[10px] font-normal opacity-85">Close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Interactive Canvas Board (h-full w-full로 반응형 확장) -->
+        <div class="relative w-full h-full bg-slate-950 rounded-2xl overflow-hidden neon-border">
+            <canvas id="gameCanvas" class="w-full h-full bg-slate-950"></canvas>
+        </div>
+    </main>
+
+    <!-- Bottom Status Panel -->
+    <footer class="w-full grid gap-3 min-h-[125px]">
+        <!-- Player status cards injected dynamically -->
+        <div id="player-cards-container" class="contents"></div>
+    </footer>
+
+    <!-- Web Audio & Core Logic Script -->
+    <script>
+        // --- [전자칠판 터치/확대 기본 동작 차단 스크립트] ---
+        // 핀치 줌 방지
+        document.addEventListener('touchmove', function (e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 더블 탭 확대 방지
+        let lastTap = 0;
+        document.addEventListener('touchend', function (e) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 300 && tapLength > 0) {
+                e.preventDefault();
+            }
+            lastTap = currentTime;
+        }, { passive: false });
+
+        // 우클릭 컨텍스트 메뉴 차단
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // --- Web Audio API Synth Sounds ---
+        class GameAudio {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playStart() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    gain.gain.setValueAtTime(0.08, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + i * 0.08 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.25);
+                });
+            }
+            playHit() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.005, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+            playCoin() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.setValueAtTime(880.00, now + 0.06); // A5
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.005, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+            playRevive() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [349.23, 440.00, 523.25, 698.46]; // F4, A4, C5, F5
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.05);
+                    gain.gain.setValueAtTime(0.08, now + i * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + i * 0.05 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.05);
+                    osc.stop(now + i * 0.05 + 0.2);
+                });
+            }
+            playDeath() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(60, now + 0.4);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.005, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+            playWin() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 523.25, 659.25];
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.12);
+                    gain.gain.setValueAtTime(0.12, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + i * 0.12 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.3);
+                });
+            }
+        }
+
+        const audio = new GameAudio();
+
+        // --- Configuration Variables ---
+        let selectedPlayers = 6;
+        let selectedHearts = 3;
+        let selectedDifficulty = 'medium';
+
+        function setPlayers(num) {
+            selectedPlayers = num;
+            document.querySelectorAll('.player-btn').forEach((btn, idx) => {
+                if (idx === num - 1) {
+                    btn.classList.add('bg-indigo-600', 'border-indigo-400');
+                    btn.classList.remove('bg-slate-800', 'border-transparent');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'border-indigo-400');
+                    btn.classList.add('bg-slate-800', 'border-transparent');
+                }
+            });
+        }
+
+        function setHearts(num) {
+            selectedHearts = num;
+            document.querySelectorAll('.heart-btn').forEach((btn, idx) => {
+                if (idx === num) {
+                    btn.classList.add('bg-pink-600', 'border-pink-400');
+                    btn.classList.remove('bg-slate-800', 'border-transparent');
+                } else {
+                    btn.classList.remove('bg-pink-600', 'border-pink-400');
+                    btn.classList.add('bg-slate-800', 'border-transparent');
+                }
+            });
+        }
+
+        function setDifficulty(diff) {
+            selectedDifficulty = diff;
+            const diffs = ['easy', 'medium', 'hard'];
+            const colors = ['green', 'yellow', 'red'];
+            document.querySelectorAll('.diff-btn').forEach((btn, idx) => {
+                if (diffs[idx] === diff) {
+                    btn.classList.add(`bg-${colors[idx]}-600`, `border-${colors[idx]}-400`);
+                    btn.classList.remove('bg-slate-800', 'border-transparent');
+                } else {
+                    btn.classList.remove(`bg-${colors[idx]}-600`, `border-${colors[idx]}-400`);
+                    btn.classList.add('bg-slate-800', 'border-transparent');
+                }
+            });
+        }
+
+        // --- Game Engine Variables ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const colors = [
+            '#ff4a4a', // 1P Red
+            '#4a90e2', // 2P Blue
+            '#50e3c2', // 3P Green
+            '#f5a623', // 4P Orange
+            '#e056fd', // 5P Pink/Purple
+            '#00d2d3'  // 6P Cyan
+        ];
+        
+        const textColors = [
+            'text-red-400',
+            'text-blue-400',
+            'text-emerald-400',
+            'text-amber-500',
+            'text-fuchsia-400',
+            'text-cyan-400'
+        ];
+
+        const cardBorders = [
+            'border-red-500/30',
+            'border-blue-500/30',
+            'border-emerald-500/30',
+            'border-amber-500/30',
+            'border-fuchsia-500/30',
+            'border-cyan-500/30'
+        ];
+
+        let players = [];
+        let poops = [];
+        let items = [];
+        let particles = [];
+        let gameActive = false;
+        let gameStartTime = 0;
+        let elapsedSeconds = 0;
+        let lastSpawnTime = 0;
+        let lastItemSpawnTime = 0;
+        let screenShake = 0;
+        let nextRankToAssign = 6;
+        let scoreSaved = false;
+
+        // --- Procedural Stickman Drawer ---
+        function drawStickman(ctx, x, y, color, state, vx, runPhase, options = {}) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Running tilt angle
+            const tilt = state === 'active' ? Math.max(-0.25, Math.min(0.25, vx * 0.08)) : 0;
+            ctx.translate(x, y);
+            ctx.rotate(tilt);
+
+            const hipY = -20;
+            const neckY = -45;
+            const headY = -55;
+            const headRadius = 9;
+
+            if (state === 'active') {
+                const isRunning = Math.abs(vx) > 0.2;
+                const bob = isRunning ? Math.abs(Math.sin(runPhase * 2)) * 3 - 1.5 : Math.sin(Date.now() / 200) * 1.5;
+                
+                // Head
+                ctx.beginPath();
+                ctx.arc(0, headY + bob, headRadius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Eyes (indicates looking direction)
+                ctx.fillStyle = '#fff';
+                const lookDir = vx > 0.1 ? 2 : (vx < -0.1 ? -2 : 0);
+                ctx.beginPath();
+                ctx.arc(lookDir - 2, headY + bob - 1.5, 1.5, 0, Math.PI * 2);
+                ctx.arc(lookDir + 2, headY + bob - 1.5, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body line (Neck to Hip)
+                const spineEndX = lookDir * 0.5;
+                ctx.beginPath();
+                ctx.moveTo(0, neckY + bob);
+                ctx.lineTo(spineEndX, hipY);
+                ctx.stroke();
+
+                // Arms Swing
+                const shoulderY = neckY + bob + 3;
+                const armSwing = isRunning ? Math.sin(runPhase) : Math.sin(Date.now() / 250) * 0.2;
+                
+                // Left Arm (Back)
+                let leftElbowX = -10 * Math.cos(armSwing) + (isRunning ? -3 : 0);
+                let leftElbowY = shoulderY + 8 * Math.sin(armSwing) + 4;
+                let leftHandX = leftElbowX - 8 * Math.sin(armSwing);
+                let leftHandY = leftElbowY + 6;
+                ctx.beginPath();
+                ctx.moveTo(0, shoulderY);
+                ctx.lineTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftHandX, leftHandY);
+                ctx.stroke();
+
+                // Right Arm (Front)
+                let rightElbowX = 10 * Math.cos(armSwing) + (isRunning ? 3 : 0);
+                let rightElbowY = shoulderY - 8 * Math.sin(armSwing) + 4;
+                let rightHandX = rightElbowX + 8 * Math.sin(armSwing);
+                let rightHandY = rightElbowY + 6;
+                ctx.beginPath();
+                ctx.moveTo(0, shoulderY);
+                ctx.lineTo(rightElbowX, rightElbowY);
+                ctx.lineTo(rightHandX, rightHandY);
+                ctx.stroke();
+
+                // Legs Run Cycle
+                // Left Leg
+                let leftKneeX = -8 + (isRunning ? Math.sin(runPhase) * 10 : 0);
+                let leftKneeY = hipY + 12 + (isRunning ? Math.max(0, Math.cos(runPhase)) * 6 : 0);
+                let leftFootX = leftKneeX + (isRunning ? Math.cos(runPhase) * 6 : -2);
+                let leftFootY = 0;
+                ctx.beginPath();
+                ctx.moveTo(spineEndX, hipY);
+                ctx.lineTo(leftKneeX, leftKneeY);
+                ctx.lineTo(leftFootX, leftFootY);
+                ctx.stroke();
+
+                // Right Leg
+                let rightKneeX = 8 + (isRunning ? -Math.sin(runPhase) * 10 : 0);
+                let rightKneeY = hipY + 12 + (isRunning ? Math.max(0, -Math.cos(runPhase)) * 6 : 0);
+                let rightFootX = rightKneeX + (isRunning ? -Math.cos(runPhase) * 6 : 2);
+                let rightFootY = 0;
+                ctx.beginPath();
+                ctx.moveTo(spineEndX, hipY);
+                ctx.lineTo(rightKneeX, rightKneeY);
+                ctx.lineTo(rightFootX, rightFootY);
+                ctx.stroke();
+
+            } else if (state === 'frozen') {
+                // Dizzy / Frozen layout
+                const shake = Math.sin(Date.now() / 40) * 1.5;
+                
+                // Tilted head
+                ctx.beginPath();
+                ctx.arc(shake, headY + 4, headRadius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // X eyes
+                ctx.beginPath();
+                ctx.moveTo(shake - 3, headY + 2); ctx.lineTo(shake - 1, headY + 5);
+                ctx.moveTo(shake - 1, headY + 2); ctx.lineTo(shake - 3, headY + 5);
+                ctx.moveTo(shake + 1, headY + 2); ctx.lineTo(shake + 3, headY + 5);
+                ctx.moveTo(shake + 3, headY + 2); ctx.lineTo(shake + 1, headY + 5);
+                ctx.stroke();
+
+                // Dizzy spiral stars floating above head
+                ctx.save();
+                ctx.strokeStyle = '#f5a623';
+                ctx.lineWidth = 1.5;
+                const starAngle = (Date.now() / 150) % (Math.PI * 2);
+                ctx.beginPath();
+                ctx.arc(shake, headY - 12, 10, starAngle, starAngle + Math.PI);
+                ctx.stroke();
+                ctx.restore();
+
+                // Spine slumped
+                ctx.beginPath();
+                ctx.moveTo(shake, neckY + 4);
+                ctx.lineTo(shake * 0.5, hipY);
+                ctx.stroke();
+
+                // Drooping arms
+                ctx.beginPath();
+                ctx.moveTo(shake, neckY + 6);
+                ctx.lineTo(-6 + shake, hipY - 2);
+                ctx.lineTo(-8 + shake, hipY + 12);
+                ctx.moveTo(shake, neckY + 6);
+                ctx.lineTo(6 + shake, hipY - 2);
+                ctx.lineTo(8 + shake, hipY + 12);
+                ctx.stroke();
+
+                // Buckled legs
+                ctx.beginPath();
+                ctx.moveTo(shake * 0.5, hipY);
+                ctx.lineTo(-6, hipY + 10);
+                ctx.lineTo(-4, 0);
+                ctx.moveTo(shake * 0.5, hipY);
+                ctx.lineTo(6, hipY + 10);
+                ctx.lineTo(4, 0);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        // --- Particle System ---
+        function createSplatParticles(x, y, colorCount) {
+            const colors = ['#8B5A2B', '#A0522D', '#5C4033', '#CD853F'];
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.8) * 6,
+                    radius: Math.random() * 4 + 1.5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1.0,
+                    decay: Math.random() * 0.04 + 0.02
+                });
+            }
+        }
+
+        function createHeartParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.7) * 4,
+                    radius: Math.random() * 3 + 1,
+                    color: '#ff69b4',
+                    alpha: 1.0,
+                    decay: Math.random() * 0.03 + 0.015,
+                    isHeart: true
+                });
+            }
+        }
+
+        function createBubbleParticles(x, y, color) {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 60,
+                    y: y + (Math.random() - 0.5) * 60,
+                    vx: (Math.random() - 0.5) * 1,
+                    vy: -Math.random() * 1 - 0.5,
+                    radius: Math.random() * 2 + 1,
+                    color: color,
+                    alpha: 0.8,
+                    decay: 0.02
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                if (p.isHeart) {
+                    ctx.font = `${p.radius * 4}px Arial`;
+                    ctx.fillText('❤️', p.x - p.radius * 2, p.y);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // --- Dynamic Interface Updates ---
+        function updateUIPanel() {
+            const min = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
+            const sec = Math.floor(elapsedSeconds % 60).toString().padStart(2, '0');
+            const ms = Math.floor((elapsedSeconds % 1) * 100).toString().padStart(2, '0');
+            document.getElementById('team-timer').innerText = `${min}:${sec}.${ms}`;
+
+            const alive = players.filter(p => p.state === 'active').length;
+            document.getElementById('alive-count').innerText = alive;
+            document.getElementById('total-count').innerText = players.length;
+
+            const container = document.getElementById('player-cards-container');
+            container.innerHTML = '';
+            
+            const footer = container.parentElement;
+            footer.style.gridTemplateColumns = `repeat(${players.length}, minmax(0, 1fr))`;
+            
+            players.forEach((p) => {
+                const isNone = selectedHearts === 0;
+                let heartHtml = '';
+                
+                if (isNone) {
+                    heartHtml = p.state === 'active' ? '🟢 활성 <span class="text-[10px] font-normal opacity-70 block">Active</span>' : '';
+                } else {
+                    for (let h = 0; h < selectedHearts; h++) {
+                        if (h < p.hearts) {
+                            heartHtml += '❤️';
+                        } else {
+                            heartHtml += '🖤';
+                        }
+                    }
+                }
+
+                let cardStateText = '';
+                let cardClass = 'bg-slate-900/80 border';
+                
+                if (p.state === 'active') {
+                    cardClass += ` ${cardBorders[p.id - 1]} shadow-[0_0_10px_rgba(255,255,255,0.02)]`;
+                    if (p.shareHeartTimeLeft > 0) {
+                        cardStateText = `
+                            <span class="text-pink-400 font-bold block animate-pulse text-[10px]">❤️ 하트 나눔 (${Math.ceil(p.shareHeartTimeLeft / 60)}초)</span>
+                            <span class="text-[8px] text-pink-500 font-normal block">Heart Share (${Math.ceil(p.shareHeartTimeLeft / 60)}s)</span>
+                        `;
+                    } else if (p.umbrellaTimeLeft > 0) {
+                        cardStateText = `
+                            <span class="text-cyan-400 font-bold block text-[10px]">🌂 우산 보호 (${Math.ceil(p.umbrellaTimeLeft / 60)}초)</span>
+                            <span class="text-[8px] text-cyan-500 font-normal block">Umbrella Shield (${Math.ceil(p.umbrellaTimeLeft / 60)}s)</span>
+                        `;
+                    } else if (p.shieldTimeLeft > 0) {
+                        cardStateText = `
+                            <span class="text-yellow-400 font-bold block text-[10px]">🛡️ 무적 상태 (${Math.ceil(p.shieldTimeLeft / 60)}초)</span>
+                            <span class="text-[8px] text-yellow-500 font-normal block">Invincible (${Math.ceil(p.shieldTimeLeft / 60)}s)</span>
+                        `;
+                    }
+                } else if (p.state === 'frozen') {
+                    cardClass += ' border-yellow-500/50 bg-yellow-950/20';
+                    const timeLeft = Math.max(0, p.frozenTimeLeft).toFixed(1);
+                    cardStateText = `
+                        <span class="text-yellow-500 font-bold block text-[10px] animate-bounce">💫 얼음! 대기 ${timeLeft}초</span>
+                        <span class="text-[8px] text-yellow-600 font-normal block">Frozen! Wait ${timeLeft}s</span>
+                    `;
+                    const barWidth = (p.reviveProgress / 5) * 100;
+                    cardStateText += `
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
+                            <div class="bg-emerald-500 h-full transition-all duration-75" style="width: ${barWidth}%"></div>
+                        </div>
+                    `;
+                } else {
+                    cardClass += ' border-slate-800 bg-slate-950 opacity-40';
+                    cardStateText = `
+                        <span class="text-slate-500 block text-[10px]">💀 사망 (${formatTime(p.survivalTime)})</span>
+                        <span class="text-[8px] text-slate-600 font-normal block">Dead (${formatTime(p.survivalTime)})</span>
+                    `;
+                }
+
+                const playerCard = document.createElement('div');
+                playerCard.className = `p-3 rounded-xl flex flex-col justify-between transition-all duration-300 h-[125px] ${cardClass}`;
+                playerCard.innerHTML = `
+                    <div class="flex justify-between items-center mb-0.5">
+                        <span class="text-lg font-bold ${textColors[p.id - 1]}">${p.name}</span>
+                        <span class="text-[9px] text-slate-500 font-mono">${p.pointerId !== null ? '🔗터치 Drag' : '대기 Standby'}</span>
+                    </div>
+                    <div class="text-base my-0.5 min-h-[24px] flex items-center gap-1">${heartHtml}</div>
+                    <div class="mt-1 h-[42px] flex flex-col justify-center overflow-hidden">${cardStateText || '<span class="text-slate-600 text-[10px] block">기본 대기</span><span class="text-[8px] text-slate-700 font-normal block">Idle</span>'}</div>
+                `;
+                container.appendChild(playerCard);
+            });
+        }
+
+        function formatTime(secInput) {
+            const min = Math.floor(secInput / 60).toString().padStart(2, '0');
+            const sec = Math.floor(secInput % 60).toString().padStart(2, '0');
+            const ms = Math.floor((secInput % 1) * 100).toString().padStart(2, '0');
+            return `${min}:${sec}.${ms}`;
+        }
+
+        // --- Interaction Event Bindings ---
+        function initPlayers() {
+            players = [];
+            nextRankToAssign = selectedPlayers;
+            
+            // Distribute players horizontally at start
+            const interval = canvas.width / (selectedPlayers + 1);
+            for (let i = 1; i <= selectedPlayers; i++) {
+                players.push({
+                    id: i,
+                    name: `${i}P`,
+                    color: colors[i - 1],
+                    x: interval * i,
+                    y: canvas.height - 30,
+                    vx: 0,
+                    targetX: interval * i,
+                    hearts: selectedHearts,
+                    state: 'active',
+                    frozenTimeLeft: 0,
+                    reviveProgress: 0,
+                    shieldTimeLeft: 0,
+                    umbrellaTimeLeft: 0,
+                    shareHeartTimeLeft: 0,
+                    pointerId: null,
+                    tilt: 0,
+                    runPhase: 0,
+                    rank: 1,
+                    survivalTime: 0,
+                    deathSpot: null
+                });
+            }
+        }
+
+        // Pointer event matching
+        canvas.addEventListener('pointerdown', (e) => {
+            if (!gameActive) return;
+            audio.init();
+
+            const rect = canvas.getBoundingClientRect();
+            const px = ((e.clientX - rect.left) / rect.width) * canvas.width;
+            const py = ((e.clientY - rect.top) / rect.height) * canvas.height;
+
+            let closestPlayer = null;
+            let minDist = 70;
+
+            players.forEach(p => {
+                if (p.state === 'active' && p.pointerId === null) {
+                    const dist = Math.hypot(p.x - px, (p.y - 30) - py);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestPlayer = p;
+                    }
+                }
+            });
+
+            if (closestPlayer) {
+                closestPlayer.pointerId = e.pointerId;
+                closestPlayer.targetX = px;
+                canvas.setPointerCapture(e.pointerId);
+            }
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!gameActive) return;
+            const rect = canvas.getBoundingClientRect();
+            const px = ((e.clientX - rect.left) / rect.width) * canvas.width;
+
+            players.forEach(p => {
+                if (p.state === 'active' && p.pointerId === e.pointerId) {
+                    p.targetX = Math.max(20, Math.min(canvas.width - 20, px));
+                }
+            });
+        });
+
+        const releasePointer = (e) => {
+            players.forEach(p => {
+                if (p.pointerId === e.pointerId) {
+                    try {
+                        canvas.releasePointerCapture(e.pointerId);
+                    } catch (err) {}
+                    p.pointerId = null;
+                }
+            });
+        };
+
+        canvas.addEventListener('pointerup', releasePointer);
+        canvas.addEventListener('pointercancel', releasePointer);
+
+        // Keyboard emergency navigation for testing on non-touch PCs
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            audio.init();
+            
+            if (players[0] && players[0].state === 'active') {
+                if (e.key === 'ArrowLeft') players[0].targetX = Math.max(20, players[0].x - 40);
+                if (e.key === 'ArrowRight') players[0].targetX = Math.min(canvas.width - 20, players[0].x + 40);
+            }
+            if (players[1] && players[1].state === 'active') {
+                if (e.key === 'a' || e.key === 'A') players[1].targetX = Math.max(20, players[1].x - 40);
+                if (e.key === 'd' || e.key === 'D') players[1].targetX = Math.min(canvas.width - 20, players[1].x + 40);
+            }
+        });
+
+        // --- Core Engine Gameplay Loops ---
+        function startGame() {
+            audio.playStart();
+            document.getElementById('setup-overlay').classList.add('hidden');
+            document.getElementById('gameover-overlay').classList.add('hidden');
+            
+            resizeCanvas();
+            initPlayers();
+            poops = [];
+            items = [];
+            particles = [];
+            gameActive = true;
+            gameStartTime = performance.now();
+            elapsedSeconds = 0;
+            lastSpawnTime = 0;
+            lastItemSpawnTime = 0;
+            screenShake = 0;
+            scoreSaved = false;
+
+            updateUIPanel();
+            requestAnimationFrame(update);
+        }
+
+        function resetSetup() {
+            document.getElementById('gameover-overlay').classList.add('hidden');
+            document.getElementById('setup-overlay').classList.remove('hidden');
+        }
+
+        function openInstructions() {
+            document.getElementById('instructions-modal').classList.remove('hidden');
+        }
+
+        function closeInstructions() {
+            document.getElementById('instructions-modal').classList.add('hidden');
+        }
+
+        function endGame() {
+            gameActive = false;
+            audio.playWin();
+
+            const remainingAlive = players.filter(p => p.state !== 'dead');
+            remainingAlive.forEach(p => {
+                p.rank = 1;
+                p.survivalTime = elapsedSeconds;
+                if (!p.deathSpot) p.deathSpot = { x: p.x, y: p.y };
+            });
+
+            document.getElementById('final-time').innerText = formatTime(elapsedSeconds);
+            
+            const scoreboardList = document.getElementById('scoreboard-list');
+            scoreboardList.innerHTML = '';
+
+            const sortedPlayers = [...players].sort((a, b) => a.rank - b.rank);
+            sortedPlayers.forEach(p => {
+                const row = document.createElement('div');
+                row.className = `flex justify-between items-center bg-black/40 px-4 py-1.5 rounded-xl border border-white/5`;
+                
+                const medal = p.rank === 1 ? '👑 1등' : `${p.rank}등`;
+                const medalEng = p.rank === 1 ? '1st' : `${p.rank}th`;
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg font-bold ${textColors[p.id - 1]}">${p.name}</span>
+                        <span class="px-2 py-0.5 bg-slate-800 rounded text-xs text-slate-300">
+                            ${medal} <span class="text-[9px] opacity-70">${medalEng}</span>
+                        </span>
+                    </div>
+                    <div class="font-mono text-base text-slate-300 text-right">
+                        ${formatTime(p.survivalTime)}
+                    </div>
+                `;
+                scoreboardList.appendChild(row);
+            });
+
+            document.getElementById('gameover-overlay').classList.remove('hidden');
+        }
+
+        function update(timestamp) {
+            if (!gameActive) return;
+
+            elapsedSeconds = (timestamp - gameStartTime) / 1000;
+
+            let progress = Math.min(1.0, elapsedSeconds / 120);
+            if (selectedDifficulty === 'easy') progress *= 0.6;
+            if (selectedDifficulty === 'hard') progress = Math.min(1.0, progress * 1.6 + 0.1);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (screenShake > 0) {
+                const shakeX = (Math.random() - 0.5) * screenShake;
+                const shakeY = (Math.random() - 0.5) * screenShake;
+                ctx.save();
+                ctx.translate(shakeX, shakeY);
+                screenShake *= 0.9;
+                if (screenShake < 0.5) screenShake = 0;
+            }
+
+            // Draw Floor Line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 30);
+            ctx.lineTo(canvas.width, canvas.height - 30);
+            ctx.stroke();
+
+            // --- 1. Player Updates ---
+            const PLAYER_RADIUS = 20;
+
+            players.forEach(p => {
+                if (p.state === 'active') {
+                    const dx = p.targetX - p.x;
+                    p.vx = dx * 0.15;
+                    p.x += p.vx;
+
+                    if (Math.abs(p.vx) > 0.1) {
+                        p.runPhase += Math.abs(p.vx) * 0.08;
+                    }
+
+                    if (p.shieldTimeLeft > 0) {
+                        p.shieldTimeLeft--;
+                        createBubbleParticles(p.x, p.y - 30, '#4a90e2');
+                    }
+                    if (p.umbrellaTimeLeft > 0) p.umbrellaTimeLeft--;
+                    if (p.shareHeartTimeLeft > 0) p.shareHeartTimeLeft--;
+                }
+            });
+
+            // Pushing physics
+            for (let i = 0; i < players.length; i++) {
+                const p1 = players[i];
+                if (p1.state !== 'active') continue;
+                for (let j = i + 1; j < players.length; j++) {
+                    const p2 = players[j];
+                    if (p2.state !== 'active') continue;
+
+                    const dx = p2.x - p1.x;
+                    const dist = Math.abs(dx);
+                    const minDist = PLAYER_RADIUS * 2;
+                    
+                    if (dist < minDist) {
+                        const overlap = minDist - dist;
+                        const dir = dx > 0 ? 1 : -1;
+                        
+                        p1.x -= (overlap / 2) * dir;
+                        p2.x += (overlap / 2) * dir;
+
+                        p1.x = Math.max(20, Math.min(canvas.width - 20, p1.x));
+                        p2.x = Math.max(20, Math.min(canvas.width - 20, p2.x));
+
+                        // Share heart on contact
+                        if (p1.shareHeartTimeLeft > 0 && p2.hearts < selectedHearts) {
+                            p2.hearts = Math.min(selectedHearts, p2.hearts + 1);
+                            p1.shareHeartTimeLeft = 0;
+                            audio.playCoin();
+                            createHeartParticles(p2.x, p2.y - 30);
+                        } else if (p2.shareHeartTimeLeft > 0 && p1.hearts < selectedHearts) {
+                            p1.hearts = Math.min(selectedHearts, p1.hearts + 1);
+                            p2.shareHeartTimeLeft = 0;
+                            audio.playCoin();
+                            createHeartParticles(p1.x, p1.y - 30);
+                        }
+                    }
+                }
+            }
+
+            // Revival logic
+            players.forEach(p => {
+                if (p.state === 'frozen') {
+                    let helpers = 0;
+                    players.forEach(other => {
+                        if (other.state === 'active') {
+                            const dist = Math.abs(other.x - p.x);
+                            if (dist < 60) helpers++;
+                        }
+                    });
+
+                    if (helpers > 0) {
+                        p.reviveProgress += helpers * (1 / 60);
+                        if (p.reviveProgress >= 5.0) {
+                            p.state = 'active';
+                            p.hearts = selectedHearts === 0 ? 0 : 1;
+                            p.reviveProgress = 0;
+                            p.targetX = p.x;
+                            audio.playRevive();
+                            createHeartParticles(p.x, p.y - 30);
+                        }
+                    } else {
+                        p.reviveProgress = Math.max(0, p.reviveProgress - (0.8 / 60));
+                    }
+
+                    if (p.frozenTimeLeft > 0) {
+                        p.frozenTimeLeft -= 1 / 60;
+                        if (p.frozenTimeLeft < 0) p.frozenTimeLeft = 0;
+                    }
+
+                    if (p.frozenTimeLeft <= 0 && helpers === 0) {
+                        p.state = 'dead';
+                        p.deathSpot = { x: p.x, y: p.y };
+                        p.rank = nextRankToAssign;
+                        p.survivalTime = elapsedSeconds;
+                        nextRankToAssign--;
+                        audio.playDeath();
+                    }
+                }
+            });
+
+            // Draw players
+            players.forEach(p => {
+                if (p.state === 'active') {
+                    if (p.umbrellaTimeLeft > 0) {
+                        ctx.save();
+                        const umbX = p.x;
+                        const umbY = p.y - 75;
+                        
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(umbX, p.y - 40);
+                        ctx.lineTo(umbX, umbY);
+                        ctx.stroke();
+
+                        ctx.fillStyle = p.color;
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2.5;
+                        ctx.beginPath();
+                        ctx.arc(umbX, umbY, 65, Math.PI, 0);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.moveTo(umbX, umbY - 65);
+                        ctx.quadraticCurveTo(umbX - 32, umbY - 32, umbX - 32, umbY);
+                        ctx.moveTo(umbX, umbY - 65);
+                        ctx.quadraticCurveTo(umbX + 32, umbY - 32, umbX + 32, umbY);
+                        ctx.stroke();
+
+                        ctx.restore();
+                    }
+
+                    drawStickman(ctx, p.x, p.y, p.color, 'active', p.vx, p.runPhase);
+
+                    if (p.shieldTimeLeft > 0) {
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(74, 144, 226, 0.7)';
+                        ctx.lineWidth = 3;
+                        ctx.shadowBlur = 12;
+                        ctx.shadowColor = '#4a90e2';
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y - 30, 42, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    if (p.shareHeartTimeLeft > 0) {
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(255, 105, 180, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([4, 4]);
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = '#ff69b4';
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y - 30, 40, 0, Math.PI * 2);
+                        ctx.stroke();
+                        
+                        ctx.fillStyle = '#ff69b4';
+                        ctx.font = '14px Arial';
+                        ctx.fillText('❤️', p.x - 7, p.y - 82 + Math.sin(Date.now() / 80) * 3);
+                        ctx.restore();
+                    }
+
+                } else if (p.state === 'frozen') {
+                    drawStickman(ctx, p.x, p.y, '#517da2', 'frozen', 0, 0);
+
+                    ctx.save();
+                    const rx = p.x;
+                    const ry = p.y - 30;
+                    
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, 40, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    const angle = (p.reviveProgress / 5) * Math.PI * 2;
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, 40, -Math.PI / 2, -Math.PI / 2 + angle);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#f5a623';
+                    ctx.font = 'bold 15px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${Math.ceil(p.frozenTimeLeft)}s`, rx, ry - 55);
+                    ctx.restore();
+                } else if (p.state === 'dead') {
+                    ctx.save();
+                    const tx = p.deathSpot.x;
+                    const ty = p.deathSpot.y;
+
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                    ctx.beginPath();
+                    ctx.ellipse(tx, ty, 20, 8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#4b5563';
+                    ctx.strokeStyle = '#1f2937';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(tx, ty - 25, 18, Math.PI, 0);
+                    ctx.lineTo(tx + 18, ty);
+                    ctx.lineTo(tx - 18, ty);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#374151';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(tx, ty - 32); ctx.lineTo(tx, ty - 12);
+                    ctx.moveTo(tx - 7, ty - 26); ctx.lineTo(tx + 7, ty - 26);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.font = 'bold 14px sans-serif';
+                    ctx.textAlign = 'center';
+                    const min = Math.floor(p.survivalTime / 60).toString().padStart(2, '0');
+                    const sec = Math.floor(p.survivalTime % 60).toString().padStart(2, '0');
+                    ctx.fillText(`${p.rank}등 (${p.rank}th)`, tx, ty - 50);
+                    ctx.fillText(`${min}:${sec}`, tx, ty - 38);
+                    ctx.restore();
+                }
+            });
+
+            // End game check
+            const activeCount = players.filter(p => p.state === 'active').length;
+            if (activeCount === 0) {
+                endGame();
+                return;
+            }
+
+            // --- 2. Hazard & Items Spawns ---
+            const poopInterval = 700 - progress * 580;
+            const now = timestamp;
+            if (now - lastSpawnTime > poopInterval) {
+                lastSpawnTime = now;
+
+                let type = 'normal';
+                const rand = Math.random();
+                if (progress > 0.08) {
+                    if (rand < 0.20) type = 'wind';
+                    else if (rand < 0.35) type = 'giant';
+                }
+
+                const speed = (4.5 + progress * 9.5) * (type === 'giant' ? 0.65 : (type === 'wind' ? 0.95 : 1.0));
+                
+                poops.push({
+                    x: Math.random() * (canvas.width - 40) + 20,
+                    y: -30,
+                    type: type,
+                    speed: speed,
+                    vx: type === 'wind' ? (Math.random() - 0.5) * 4.5 : 0,
+                    radius: type === 'giant' ? 25 : 12,
+                    emoji: '💩'
+                });
+            }
+
+            const itemInterval = 8000 + Math.random() * 4000;
+            if (now - lastItemSpawnTime > itemInterval) {
+                lastItemSpawnTime = now;
+                
+                const itemTypes = ['heart', 'shield', 'umbrella'];
+                const filteredTypes = selectedHearts === 0 ? ['shield', 'umbrella'] : itemTypes;
+                const rType = filteredTypes[Math.floor(Math.random() * filteredTypes.length)];
+                
+                let emoji = '❤️';
+                if (rType === 'shield') emoji = '🛡️';
+                if (rType === 'umbrella') emoji = '🌂';
+
+                items.push({
+                    x: Math.random() * (canvas.width - 60) + 30,
+                    y: -30,
+                    type: rType,
+                    emoji: emoji,
+                    speed: 2.5 + Math.random() * 1.5,
+                    radius: 16
+                });
+            }
+
+            // --- 3. Update & Draw Hazards (Poops) ---
+            for (let i = poops.length - 1; i >= 0; i--) {
+                const p = poops[i];
+                p.y += p.speed;
+                p.x += p.vx;
+
+                if (p.x < 15 || p.x > canvas.width - 15) p.vx *= -1;
+
+                ctx.save();
+                ctx.font = `${p.radius * 2.2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.translate(p.x, p.y);
+                if (p.type === 'wind') {
+                    ctx.rotate(Date.now() / 200 * (p.vx > 0 ? 1 : -1));
+                }
+                ctx.fillText(p.emoji, 0, 0);
+                ctx.restore();
+
+                // Check Umbrella Collision (curved dome canopy, top half)
+                let blocked = false;
+                players.forEach(u => {
+                    if (u.state === 'active' && u.umbrellaTimeLeft > 0) {
+                        const umbY = u.y - 75;
+                        const distToUmb = Math.hypot(p.x - u.x, p.y - umbY);
+                        if (distToUmb <= 68 && p.y <= umbY) {
+                            blocked = true;
+                        }
+                    }
+                });
+
+                if (blocked) {
+                    audio.playHit();
+                    createSplatParticles(p.x, p.y, 6);
+                    poops.splice(i, 1);
+                    continue;
+                }
+
+                // Check Player Collisions
+                let hitPlayer = false;
+                for (let k = 0; k < players.length; k++) {
+                    const pl = players[k];
+                    if (pl.state !== 'active') continue;
+
+                    const dist = Math.hypot(pl.x - p.x, (pl.y - 30) - p.y);
+                    const touchRange = p.radius + 20;
+
+                    if (dist < touchRange) {
+                        hitPlayer = true;
+                        
+                        if (pl.shieldTimeLeft > 0) {
+                            audio.playHit();
+                            createSplatParticles(p.x, p.y, 6);
+                        } else {
+                            if (selectedHearts === 0) {
+                                pl.state = 'frozen';
+                                pl.frozenTimeLeft = 15.0;
+                                pl.reviveProgress = 0;
+                                pl.pointerId = null;
+                                audio.playDeath();
+                            } else {
+                                pl.hearts--;
+                                if (pl.hearts <= 0) {
+                                    pl.state = 'frozen';
+                                    pl.frozenTimeLeft = 15.0;
+                                    pl.reviveProgress = 0;
+                                    pl.pointerId = null;
+                                    audio.playDeath();
+                                } else {
+                                    audio.playHit();
+                                    screenShake = 12;
+                                    createSplatParticles(pl.x, pl.y - 30, 8);
+                                }
+                            }
+                        }
+                        
+                        poops.splice(i, 1);
+                        break;
+                    }
+                }
+
+                if (hitPlayer) continue;
+
+                // Out of screen (floor collision at canvas.height - 30)
+                if (p.y > canvas.height - 30) {
+                    createSplatParticles(p.x, canvas.height - 30, 4);
+                    poops.splice(i, 1);
+                }
+            }
+
+            // --- 4. Update & Draw Items ---
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.y += item.speed;
+
+                ctx.save();
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.translate(item.x, item.y);
+                ctx.rotate(Math.sin(Date.now() / 150) * 0.15);
+                ctx.fillText(item.emoji, 0, 0);
+                ctx.restore();
+
+                let collected = false;
+                let collectingPlayers = [];
+                players.forEach(pl => {
+                    if (pl.state === 'active') {
+                        const dist = Math.hypot(pl.x - item.x, (pl.y - 30) - item.y);
+                        if (dist < 40) {
+                            collectingPlayers.push(pl);
+                        }
+                    }
+                });
+
+                if (collectingPlayers.length > 0) {
+                    collected = true;
+                    
+                    if (item.type === 'heart') {
+                        collectingPlayers.forEach(cPlayer => {
+                            cPlayer.hearts = Math.min(selectedHearts, cPlayer.hearts + 1);
+                            cPlayer.shareHeartTimeLeft = 300;
+                            createHeartParticles(cPlayer.x, cPlayer.y - 30);
+                        });
+                        audio.playCoin();
+                    } else if (item.type === 'shield') {
+                        collectingPlayers.forEach(cPlayer => {
+                            cPlayer.shieldTimeLeft = 480;
+                        });
+                        audio.playCoin();
+                    } else if (item.type === 'umbrella') {
+                        collectingPlayers.forEach(cPlayer => {
+                            cPlayer.umbrellaTimeLeft = 600;
+                        });
+                        audio.playCoin();
+                    }
+
+                    items.splice(i, 1);
+                }
+
+                if (collected) continue;
+
+                if (item.y > canvas.height - 30) {
+                    items.splice(i, 1);
+                }
+            }
+
+            if (screenShake > 0) {
+                ctx.restore();
+            }
+
+            updateAndDrawParticles();
+            updateUIPanel();
+
+            requestAnimationFrame(update);
+        }
+
+        // --- Screen Setup and Resizing Initializer ---
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            if (gameActive) {
+                players.forEach(p => {
+                    p.y = canvas.height - 30;
+                    p.x = Math.max(20, Math.min(canvas.width - 20, p.x));
+                    p.targetX = Math.max(20, Math.min(canvas.width - 20, p.targetX));
+                });
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        setPlayers(6);
+        setHearts(3);
+        setDifficulty('medium');
+    </script>
+</body>
+</html>
