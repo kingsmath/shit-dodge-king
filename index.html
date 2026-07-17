@@ -166,7 +166,7 @@
 
                 <div class="bg-slate-900/80 border border-white/10 rounded-2xl p-4 w-full mb-4 text-left">
                     <h3 class="text-xl font-bold mb-2 text-slate-300 border-b border-white/10 pb-1 flex justify-between items-center">
-                  <span>📊 플레이어별 개인 생존 기록</span>
+                        <span>📊 플레이어별 개인 생존 기록</span>
                         <span class="text-xs font-normal opacity-70">Individual Player Survival Records</span>
                     </h3>
                     <div id="scoreboard-list" class="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -459,6 +459,7 @@
         let poops = [];
         let items = [];
         let particles = [];
+        let splashes = [];
         let gameActive = false;
         let gameStartTime = 0;
         let elapsedSeconds = 0;
@@ -691,6 +692,89 @@
             }
         }
 
+        function triggerSplash(px, py, type, excludePlayerId = null) {
+            let R = 40;
+            if (type === 'giant') R = 85;
+            if (type === 'wind') R = 55;
+
+            // Add splash visual ripple
+            splashes.push({
+                x: px,
+                y: py,
+                radius: 10,
+                maxRadius: R,
+                color: type === 'giant' ? 'rgba(160, 82, 45, 0.35)' : 'rgba(139, 90, 43, 0.4)',
+                alpha: 0.7,
+                type: type
+            });
+
+            // Check splash damage on all active players
+            players.forEach(pl => {
+                if (pl.state !== 'active' || pl.id === excludePlayerId) return;
+
+                const dist = Math.hypot(pl.x - px, (pl.y - 30) - py);
+                if (dist < R) {
+                    // Check Shield
+                    if (pl.shieldTimeLeft > 0) return;
+
+                    // Check Umbrella canopy protection
+                    let umbrellaProtected = false;
+                    players.forEach(u => {
+                        if (u.state === 'active' && u.umbrellaTimeLeft > 0) {
+                            if (Math.abs(pl.x - u.x) < 68) {
+                                umbrellaProtected = true;
+                            }
+                        }
+                    });
+                    if (umbrellaProtected) return;
+
+                    // Apply splash damage
+                    if (selectedHearts === 0) {
+                        pl.state = 'frozen';
+                        pl.frozenTimeLeft = 15.0;
+                        pl.reviveProgress = 0;
+                        pl.pointerId = null;
+                        audio.playDeath();
+                    } else {
+                        pl.hearts--;
+                        if (pl.hearts <= 0) {
+                            pl.state = 'frozen';
+                            pl.frozenTimeLeft = 15.0;
+                            pl.reviveProgress = 0;
+                            pl.pointerId = null;
+                            audio.playDeath();
+                        } else {
+                            createSplatParticles(pl.x, pl.y - 30, 5);
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateAndDrawSplashes() {
+            for (let i = splashes.length - 1; i >= 0; i--) {
+                const s = splashes[i];
+                s.radius += (s.maxRadius - s.radius) * 0.15;
+                s.alpha -= 0.04;
+
+                if (s.alpha <= 0 || s.radius >= s.maxRadius - 1) {
+                    splashes.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = s.alpha;
+                ctx.fillStyle = s.color;
+                ctx.strokeStyle = s.type === 'giant' ? '#A0522D' : '#8B5A2B';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
         // --- Dynamic Interface Updates ---
         function updateUIPanel() {
             const min = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
@@ -901,6 +985,7 @@
             poops = [];
             items = [];
             particles = [];
+            splashes = [];
             gameActive = true;
             gameStartTime = performance.now();
             elapsedSeconds = 0;
@@ -1328,6 +1413,7 @@
 
                     if (dist < touchRange) {
                         hitPlayer = true;
+                        const hitY = pl.y - 30;
                         
                         if (pl.shieldTimeLeft > 0) {
                             audio.playHit();
@@ -1355,6 +1441,7 @@
                             }
                         }
                         
+                        triggerSplash(p.x, hitY, p.type, pl.id);
                         poops.splice(i, 1);
                         break;
                     }
@@ -1365,6 +1452,7 @@
                 // Out of screen (floor collision at canvas.height - 30)
                 if (p.y > canvas.height - 30) {
                     createSplatParticles(p.x, canvas.height - 30, 4);
+                    triggerSplash(p.x, canvas.height - 30, p.type);
                     poops.splice(i, 1);
                 }
             }
@@ -1430,6 +1518,7 @@
                 ctx.restore();
             }
 
+            updateAndDrawSplashes();
             updateAndDrawParticles();
             updateUIPanel();
 
