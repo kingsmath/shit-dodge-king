@@ -1,19 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><script async src="https://www.googletagmanager.com/gtag/js?id=G-5YW0T2C109"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-5YW0T2C109');
-</script>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>협똥킹 (협동 똥피하기 킹) | Shit Dodge King</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
         
         /* [전자칠판 최적화 제약 조건 적용] */
         * {
@@ -24,7 +17,7 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Gaegu', cursive;
+            font-family: 'Noto Sans KR', sans-serif;
             background-color: #080710;
             overflow: hidden;
             touch-action: none;
@@ -1273,7 +1266,7 @@
                     ctx.stroke();
 
                     ctx.fillStyle = '#f5a623';
-                    ctx.font = 'bold 15px sans-serif';
+                    ctx.font = 'bold 15px "Noto Sans KR", sans-serif';
                     ctx.textAlign = 'center';
                     ctx.fillText(`${Math.ceil(p.frozenTimeLeft)}s`, rx, ry - 55);
                     ctx.restore();
@@ -1306,7 +1299,7 @@
                     ctx.stroke();
 
                     ctx.fillStyle = '#9ca3af';
-                    ctx.font = 'bold 14px sans-serif';
+                    ctx.font = 'bold 14px "Noto Sans KR", sans-serif';
                     ctx.textAlign = 'center';
                     const min = Math.floor(p.survivalTime / 60).toString().padStart(2, '0');
                     const sec = Math.floor(p.survivalTime % 60).toString().padStart(2, '0');
@@ -1324,7 +1317,7 @@
             }
 
             // --- 2. Hazard & Items Spawns ---
-            const poopInterval = 700 - progress * 580;
+            const poopInterval = (700 - progress * 580) / 1.5;
             const now = timestamp;
             if (now - lastSpawnTime > poopInterval) {
                 lastSpawnTime = now;
@@ -1338,8 +1331,26 @@
 
                 const speed = (4.5 + progress * 9.5) * (type === 'giant' ? 0.65 : (type === 'wind' ? 0.95 : 1.0));
                 
+                // 자주 사람이 서 있는 장소로 타겟팅하여 똥 발사
+                let spawnX;
+                const activePlayers = players.filter(p => p.state === 'active');
+                
+                // 난이도별 타겟팅 확률 설정 (easy: 50%, medium: 75%, hard: 95%)
+                let targetChance = 0.75;
+                if (selectedDifficulty === 'easy') targetChance = 0.50;
+                else if (selectedDifficulty === 'hard') targetChance = 0.95;
+
+                if (activePlayers.length > 0 && Math.random() < targetChance) {
+                    const targetPlayer = activePlayers[Math.floor(Math.random() * activePlayers.length)];
+                    spawnX = targetPlayer.x;
+                } else {
+                    spawnX = Math.random() * (canvas.width - 40) + 20;
+                }
+                // 안전한 영역 내부로 보정
+                spawnX = Math.max(20, Math.min(canvas.width - 20, spawnX));
+                
                 poops.push({
-                    x: Math.random() * (canvas.width - 40) + 20,
+                    x: spawnX,
                     y: -30,
                     type: type,
                     speed: speed,
