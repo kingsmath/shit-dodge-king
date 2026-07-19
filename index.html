@@ -1331,19 +1331,22 @@
 
                 const speed = (4.5 + progress * 9.5) * (type === 'giant' ? 0.65 : (type === 'wind' ? 0.95 : 1.0));
                 
-                // 자주 사람이 서 있는 장소로 타겟팅하여 똥 발사
+                // 랜덤 + 타겟팅 혼합: 일부는 랜덤, 일부는 플레이어를 노림
                 let spawnX;
                 const activePlayers = players.filter(p => p.state === 'active');
                 
-                // 난이도별 타겟팅 확률 설정 (easy: 50%, medium: 75%, hard: 95%)
-                let targetChance = 0.75;
-                if (selectedDifficulty === 'easy') targetChance = 0.50;
-                else if (selectedDifficulty === 'hard') targetChance = 0.95;
+                // 난이도별 타겟팅 확률 (easy: 25%, medium: 40%, hard: 60%)
+                let targetChance = 0.40;
+                if (selectedDifficulty === 'easy') targetChance = 0.25;
+                else if (selectedDifficulty === 'hard') targetChance = 0.60;
 
                 if (activePlayers.length > 0 && Math.random() < targetChance) {
+                    // 타겟팅: 플레이어 근처를 노리되, 랜덤 오차 추가 (±80~150px)
                     const targetPlayer = activePlayers[Math.floor(Math.random() * activePlayers.length)];
-                    spawnX = targetPlayer.x;
+                    const spread = 80 + Math.random() * 70; // 80~150px 오차
+                    spawnX = targetPlayer.x + (Math.random() - 0.5) * spread;
                 } else {
+                    // 완전 랜덤 위치
                     spawnX = Math.random() * (canvas.width - 40) + 20;
                 }
                 // 안전한 영역 내부로 보정
