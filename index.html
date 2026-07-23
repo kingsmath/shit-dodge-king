@@ -738,6 +738,7 @@
                     if (selectedHearts === 0) {
                         pl.state = 'frozen';
                         pl.frozenTimeLeft = 15.0;
+                        pl.frozenAt = elapsedSeconds;
                         pl.reviveProgress = 0;
                         pl.pointerId = null;
                         audio.playDeath();
@@ -748,6 +749,7 @@
                         } else {
                             pl.state = 'frozen';
                             pl.frozenTimeLeft = 15.0;
+                            pl.frozenAt = elapsedSeconds;
                             pl.reviveProgress = 0;
                             pl.pointerId = null;
                             audio.playDeath();
@@ -905,6 +907,7 @@
                     runPhase: 0,
                     rank: 1,
                     survivalTime: 0,
+                    frozenAt: 0,
                     deathSpot: null
                 });
             }
@@ -1021,10 +1024,15 @@
             gameActive = false;
             audio.playWin();
 
+            // Players still 'frozen' (not yet officially dead) when the last
+            // active player goes down are ranked by how long they actually
+            // lasted (frozenAt), not all lumped together as rank 1.
             const remainingAlive = players.filter(p => p.state !== 'dead');
+            remainingAlive.sort((a, b) => b.frozenAt - a.frozenAt);
             remainingAlive.forEach(p => {
-                p.rank = 1;
-                p.survivalTime = elapsedSeconds;
+                p.rank = nextRankToAssign;
+                p.survivalTime = p.frozenAt;
+                nextRankToAssign--;
                 if (!p.deathSpot) p.deathSpot = { x: p.x, y: p.y };
             });
 
@@ -1449,6 +1457,7 @@
                             if (selectedHearts === 0) {
                                 pl.state = 'frozen';
                                 pl.frozenTimeLeft = 15.0;
+                                pl.frozenAt = elapsedSeconds;
                                 pl.reviveProgress = 0;
                                 pl.pointerId = null;
                                 audio.playDeath();
@@ -1461,6 +1470,7 @@
                                 } else {
                                     pl.state = 'frozen';
                                     pl.frozenTimeLeft = 15.0;
+                                    pl.frozenAt = elapsedSeconds;
                                     pl.reviveProgress = 0;
                                     pl.pointerId = null;
                                     audio.playDeath();
